@@ -14,9 +14,9 @@ class ServerFiniteStateMachine {
     }
   }
 
-  run = () => this.init_callback();
+  run = () => this.init();
 
-  init_callback = () => {
+  init = () => {
     this.init_bind_port();
     this.init_on_message();
     this.init_on_listening();
