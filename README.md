@@ -8,10 +8,12 @@
 [可靠传输 rdt2.2](https://github.com/y805939188/reliable-udp/tree/master/rdt2.2)</br>
 [可靠传输 rdt3.0](https://github.com/y805939188/reliable-udp/tree/master/rdt3.0)</br>
 
-- [x] 等停协议
+---
+## 等停协议
 - [x] 确认机制
 - [x] 超时重传
 - [x] 序号
+## 流水线协议
 - [ ] 滑动窗口
 - [ ] 选择重传
 
