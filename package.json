@@ -1,0 +1,22 @@
+{
+  "name": "udp",
+  "version": "1.0.0",
+  "description": "",
+  "main": "udp-client.base.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/y805939188/reliable-udp.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/y805939188/reliable-udp/issues"
+  },
+  "homepage": "https://github.com/y805939188/reliable-udp#readme",
+  "dependencies": {
+    "log4js": "^6.3.0"
+  }
+}

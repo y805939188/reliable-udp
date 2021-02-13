@@ -29,19 +29,10 @@ class ClientFiniteStateMachine {
     this.init_on_error();
   }
 
-  // 绑定某个端口
-  init_bind_port = () => this.udp_client.bind(this.CLIENT_PORT);
-
   // 接收消息
   init_on_message = () => this.udp_client.on('message', (msg, { port, address }) => {
     console.log(`udp 客户端接收到了来自 ${address}:${port} 的消息: ${String(msg)}`);
   });
-
-  // 当客户端关闭
-  init_on_close = () => this.udp_client.on('close', () => console.log('udp 客户端关闭'));
-
-  // 错误处理
-  init_on_error = () => this.udp_client.on('error', (err) => console.log(`upd 服务发生错误: ${err}`));
 
   dispatch = (action, msg) => {
     switch(action) {
@@ -60,6 +51,16 @@ class ClientFiniteStateMachine {
     // 第二参数 0 表示要发送的信息在 _buffer 中的偏移量
     this.udp_client.send(_buffer, 0, _buffer.byteLength, this.SERVER_PORT, this.SERVER_ADDRESS);
   }
+
+  // 绑定某个端口
+  init_bind_port = () => this.udp_client.bind(this.CLIENT_PORT);
+
+  // 当客户端关闭
+  init_on_close = () => this.udp_client.on('close', () => console.log('udp 客户端关闭'));
+
+  // 错误处理
+  init_on_error = () => this.udp_client.on('error', (err) => console.log(`upd 服务发生错误: ${err}`));
+
 }
 
 // 初始化一个 UDP 客户端的状态机

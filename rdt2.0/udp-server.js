@@ -25,9 +25,6 @@ class ServerFiniteStateMachine {
     this.init_on_error();
   }
 
-  // 绑定端口
-  init_bind_port = () => this.udp_server.bind(this.SERVER_PORT);
-
   // 接收消息
   init_on_message = () => this.udp_server.on('message', (pkt, { port, address }) => {
     console.log(`${SERVER_PORT} 端口的 udp 服务接收到了来自 ${address}:${port} 的消息`);
@@ -39,15 +36,6 @@ class ServerFiniteStateMachine {
       console.log(`消息的校验和 checksum 发生了错误, 将返回 NAK 应答`);
       this.dispatch('corrupt', { port, address });
     }
-  });
-
-  // 监听端口
-  init_on_listening = () => this.udp_server.on('listening', () => console.log(`upd 服务正在监听 ${SERVER_PORT} 端口`));
-
-  // 错误处理
-  init_on_error = () => this.udp_server.on('error', (err) => {
-    console.log(`upd 服务发生错误: ${err}`);
-    this.udp_server.close();
   });
 
   dispatch = (action, { packet, port, address }) => {
@@ -93,6 +81,19 @@ class ServerFiniteStateMachine {
     // 第二参数 0 表示要发送的信息在 _buffer 中的偏移量
     this.udp_server.send(_buffer, 0, _buffer.byteLength, port, address);
   }
+
+  // 绑定端口
+  init_bind_port = () => this.udp_server.bind(this.SERVER_PORT);
+
+  // 监听端口
+  init_on_listening = () => this.udp_server.on('listening', () => console.log(`upd 服务正在监听 ${SERVER_PORT} 端口`));
+
+  // 错误处理
+  init_on_error = () => this.udp_server.on('error', (err) => {
+    console.log(`upd 服务发生错误: ${err}`);
+    this.udp_server.close();
+  });
+  
 }
 
 const SFSM = new ServerFiniteStateMachine({ SERVER_PORT });

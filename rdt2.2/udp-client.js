@@ -8,7 +8,6 @@ const CLIENT_PORT = 19411;
 class ClientFiniteStateMachine {
   ACTIONS = {
     RDT_SEND: 'rdt_send',
-    IS_ACK: 'is_ack',
     NOT_CORRUPT: 'not_corrupt',
     CORRUPT: 'corrupt',
   };
