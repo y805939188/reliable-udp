@@ -9,8 +9,11 @@ class ServerFiniteStateMachine {
     CORRUPT: 'corrupt', // 该动作在校验和出错的情况下触发
   };
 
+  // 上一次的 seq 理论上永远和渴望得到的 seq 是不一样的
+  prev_seq = 1;
   // 用该变量表示服务端渴望接收到的分组的序号
   desired_seq = 0;
+  ack_with_seq = null;
 
   constructor({ SERVER_PORT }) {
     if (SERVER_PORT) {
@@ -38,17 +41,20 @@ class ServerFiniteStateMachine {
       console.log(`消息的校验和 checksum 以及 seq 都是正确的, 将返回 ACK 应答`);
       // 然后要修改渴望得到的序号为下一个
       this.desired_seq = this.desired_seq === 0 ? 1 : 0;
+      // 将本次发过来的 seq 记录为 "最近一次正确的 seq"
+      this.prev_seq = seq;
       this.dispatch('not_corrupt', { packet: JSON.stringify(data), port, address });
     } else {
       if (!checksum) {
         // 如果校验和出错说明客户端传过来的数据本身可能出现问题了
-        console.log(`消息的校验和 checksum 出错, 将返回 NAK 应答`);
+        console.log(`消息的校验和 checksum 出错, 将返回 ACK${this.prev_seq} 应答`);
         this.dispatch('corrupt', { port, address });
       } else if (seq !== this.desired_seq) {
+        console.log(`消息的校验和 checksum 正确, 本次请求的序号 seq 和期望的不一致, 将返回 ACK${this.prev_seq} 应答`);
         // 如果校验和没错但是传过来的序号不是期望得到的
         // 说明可能在上次一服务端往客户端传送应答时的那份儿应答挂了
-        // 此时需要重新回传一份 ACK, 这份 ACK 就是网络中冗余的报文分组
-        this.dispatch('not_corrupt', { packet: JSON.stringify(data), port, address });
+        // 此时需要重新回传一份 ACK 并且序号是上一次 msg 的序号
+        this.dispatch('corrupt', { port, address });
       }
     }
   });
@@ -62,8 +68,8 @@ class ServerFiniteStateMachine {
         this.deliver_data(data, { port, address });
         break;
       case this.ACTIONS.CORRUPT:
-        // 如果发生了错误的话就构建一个 NAK 错误应答的报文
-        const sndpkt1 = this.make_pkt('NAK', this.get_checksum());
+        // 发生错误的话构建一个 ACK 应答并且将上一个序号返回
+        const sndpkt1 = this.make_pkt(this.create_ack_with_seq(), this.get_checksum());
         // 并且把这个 NAK 的否定应答返回给客户端
         this.udt_send(sndpkt1, { port, address });
         break;
@@ -71,7 +77,7 @@ class ServerFiniteStateMachine {
         // 如果状态是 not corrupt 说明客户端发送过来的报文的校验和是正确的
         this.dispatch('rdt_rcv', { packet, port, address });
         // 此时就要构建一个 ACK 应答表示成功接收到了数据报或分组
-        const sndpkt2 = this.make_pkt('ACK', this.get_checksum());
+        const sndpkt2 = this.make_pkt(this.create_ack_with_seq(), this.get_checksum());
         // 然后将成功应答返回给客户端
         this.udt_send(sndpkt2, { port, address });
         break;
@@ -81,7 +87,7 @@ class ServerFiniteStateMachine {
 
   // flag 表示 NAK 或 ACK 标志位
   // 由于返回的应答报文实际上也可能会发生错误 所以也需要有个 checksum
-  make_pkt = (flag, checksum, msg) => (JSON.stringify({ data: msg, flag, checksum }));
+  make_pkt = (ack_with_seq, checksum, msg) => (JSON.stringify({ data: msg, ack_with_seq, checksum }));
 
   extract = (packet) => (JSON.parse(packet));
 
@@ -119,6 +125,8 @@ class ServerFiniteStateMachine {
     console.log(`本次分组随机生成的校验和是: ${checksum}`);
     return checksum;
   }
+
+  create_ack_with_seq = (seq = this.prev_seq) => (`ACK${Number(seq)}`);
 
 }
 
