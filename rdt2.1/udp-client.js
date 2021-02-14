@@ -8,14 +8,16 @@ const CLIENT_PORT = 19411;
 class ClientFiniteStateMachine {
   ACTIONS = {
     RDT_SEND: 'rdt_send',
-    IS_ACK: 'is_ack',
-    IS_NAK: 'is_nak',
-    NOT_CORRUPT: 'not_corrupt',
-    CORRUPT: 'corrupt',
+    IS_ACK: 'is_ack', // 表示触发了接收到 ack 报文的动作
+    IS_NAK: 'is_nak', // 表示触发了接收到 nak 报文的动作
+    NOT_CORRUPT: 'not_corrupt', // 由于来自服务端的 checksum 可能是正确的所以需要这么一个行为动作
+    CORRUPT: 'corrupt', // 由于来自服务端的 checksum 可能会出错所以需要这么一个行为动作
   };
 
+  // 用一个变量来保存上一次发送的 msg
   prev_msg = null;
 
+  // 设置一条队列用来缓存还未发送的数据
   buffer_queue = [];
 
   // 设置一个初始序号 该序号要在 0 和 1 之间来回切换
@@ -39,6 +41,9 @@ class ClientFiniteStateMachine {
     this.init_on_close();
     this.init_on_error();
   }
+
+  //  该方法作为暴露给上层的接口进行调用
+  send_message = (msg) => this.dispatch('rdt_send', msg)
 
   // 接收消息
   init_on_message = () => this.udp_client.on('message', (msg, { port, address }) => {
@@ -154,4 +159,4 @@ class ClientFiniteStateMachine {
 // 初始化一个 UDP 客户端的状态机
 const CFSM = new ClientFiniteStateMachine({ SEND_INTERVAL, SERVER_PORT, SERVER_ADDRESS, CLIENT_PORT });
 // 每隔多少秒定时给客户端的 UDP 状态机派发一个发送消息的动作
-setInterval(((index) => () => CFSM.dispatch('rdt_send', `数字: ${index++}`))(0), SEND_INTERVAL);
+setInterval(((index) => () => CFSM.send_message(`数字: ${index++}`))(0), SEND_INTERVAL);

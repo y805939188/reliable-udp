@@ -4,7 +4,7 @@ const SERVER_PORT = 13190;
 
 class ServerFiniteStateMachine {
   ACTIONS = {
-    RDT_RECEIVE: 'rdt_rcv',
+    RDT_RECEIVE: 'rdt_rcv', // 该动作表示要处理接收到的 packet
     NOT_CORRUPT: 'not_corrupt', // 该动作在校验和没出错的情况下触发
     CORRUPT: 'corrupt', // 该动作在校验和出错的情况下触发
   };
@@ -16,7 +16,8 @@ class ServerFiniteStateMachine {
     }
   }
 
-  run = () => this.init();
+  // 该方法暴露给外部, 当初始化该 class 之后调用
+  receive_message = () => this.init();
 
   init = () => {
     this.init_bind_port();
@@ -97,4 +98,4 @@ class ServerFiniteStateMachine {
 }
 
 const SFSM = new ServerFiniteStateMachine({ SERVER_PORT });
-SFSM.run();
+SFSM.receive_message();

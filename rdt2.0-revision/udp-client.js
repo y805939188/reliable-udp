@@ -1,19 +1,20 @@
-// dgram 模块提供了对 udp socket 的封装
-const dgram = require('dgram');
-const SEND_INTERVAL = 1000;
-const SERVER_PORT = 13190;
-const SERVER_ADDRESS = '127.0.0.1';
-const CLIENT_PORT = 19411;
+const dgram = require('dgram'); // dgram 模块提供了对 udp socket 的封装
+const SEND_INTERVAL = 1000; // 每隔 1 秒向服务端发送一次消息
+const SERVER_PORT = 13190; // 服务端的端口号时 13190
+const SERVER_ADDRESS = '127.0.0.1'; // 服务端的地址就是本机
+const CLIENT_PORT = 19411; // 当前这个客户端的端口号是 19411, 其实客户端也可以绑定 port, socket 也会自动绑定​
 
 class ClientFiniteStateMachine {
   ACTIONS = {
-    RDT_SEND: 'rdt_send',
-    IS_ACK: 'is_ack',
-    IS_NAK: 'is_nak',
+    RDT_SEND: 'rdt_send', // rdt_send 表示发送一条消息
+    IS_ACK: 'is_ack', // 服务端可能会回送 肯定应答
+    IS_NAK: 'is_nak', // 服务端可能会回送 否定应答
   };
 
+  // 用一个变量来保存上一次发送的 msg
   prev_msg = null;
 
+  // 设置一条队列用来缓存还未发送的数据
   buffer_queue = [];
 
   constructor({ SEND_INTERVAL, SERVER_PORT, SERVER_ADDRESS, CLIENT_PORT }) {
@@ -35,10 +36,14 @@ class ClientFiniteStateMachine {
     this.init_on_error();
   }
 
+  //  该方法作为暴露给上层的接口进行调用
+  send_message = (msg) => this.dispatch('rdt_send', msg)
+
   // 接收消息
   init_on_message = () => this.udp_client.on('message', (msg, { port, address }) => {
     console.log(`udp 客户端接收到了来自 ${address}:${port} 的消息`);
-    const { flag, data } = JSON.parse(msg);
+    // 服务端将会在相应中使用 flag 来标识是 ACK 还是 NAK
+    const { flag } = JSON.parse(msg);
     // 把上一次发送的 msg 也就是队列最左侧的 msg 先拿出来, 这个 msg 有可能发送成功, 也有可能发送失败
     const prev_msg = this.buffer_queue.shift();
     if (flag === 'ACK') {
@@ -77,31 +82,14 @@ class ClientFiniteStateMachine {
           // 需要先等之前的分组发送完成才能继续发送下一个分组
           // 把当前的 msg 先推入队列 只有当该 buffer_queue[0] 位的 msg 成功被发送到 udp 的服务端时
           // 才能把 buffer_queue[0] 真的从队列的左侧 shift 出来
-          if (Array.isArray(msg)) {
-            // 如果是个 array 类型就平铺开
-            this.buffer_queue.push(...msg);
-          } else {
-            // 如果传进来的 msg 不是 Array 就直接 push 到队尾
-            this.buffer_queue.push(msg);
-          }
+          Array.isArray(msg) ? this.buffer_queue.push(...msg) : this.buffer_queue.push(msg);
         } else {
           // 如果 buffer_queue 中没有 msg 了那就可以立即发送当前传进来的 msg 了
           // 同样也要先把它放进 buffer_queue 的最左侧缓存起来 以防止该 msg 发送失败
           // 同时 unshift 之后也能保证再 udp 服务端没有应答之前再有新的消息进来的话可以保证走到上面有 length 的逻辑
-          if (Array.isArray(msg)) {
-            // 如果是个 array 类型就平铺插到队头
-            this.buffer_queue.unshift(...msg);
-          } else {
-            // 如果传进来的 msg 不是 Array 就直接插入到队头 也就是 buffer_queue 的最左侧
-            this.buffer_queue.unshift(msg);
-          } 
-          // 由于当前不好模拟真正网络请求中校验和出错的场景 所以这里设置一个假的开关
-          const random_error_switch = Math.random() >= 0.5;
-          // 该开关为 0 时候表示校验和出现差错, 为 1 时表示校验和没有出现差错
-          const checksum = random_error_switch ? 0 : 1;
-          console.log(`本次分组随机生成的校验和是: ${checksum}`);
+          Array.isArray(msg) ? this.buffer_queue.unshift(...msg) : this.buffer_queue.unshift(msg);
           // 使用队列中最左侧的元素作为 msg 封装为 packet
-          const packet = this.make_pkt(checksum, this.buffer_queue[0]);
+          const packet = this.make_pkt(this.get_checksum(), this.buffer_queue[0]);
           // 发送该数据报
           this.udt_send(packet);
         }
@@ -120,14 +108,14 @@ class ClientFiniteStateMachine {
           this.buffer_queue.length = 0;
           this.dispatch('rdt_send', temp_current_msg2);
         } else {
-          console.log('可以做一些别的事情了比如发送下一个分组之类的或者断开 socket');
-          // this.udp_client.close();
+          console.log('可以做一些别的事情了比如发送下一个分组之类的');
         }
         break;
       default: return;
     }
   }
 
+  // 将 checksum 也构建进去
   make_pkt = (checksum, msg) => (JSON.stringify({ data: msg, checksum }));
 
   udt_send = (pkt) => {
@@ -146,10 +134,19 @@ class ClientFiniteStateMachine {
 
   // 错误处理
   init_on_error = () => this.udp_client.on('error', (err) => console.log(`upd 服务发生错误: ${err}`));
-
+  
+  // 生成一个假的随机的校验和
+  get_checksum = () => {
+    // 由于当前不好模拟真正网络请求中校验和出错的场景 所以这里设置一个假的开关
+    const random_error_switch = Math.random() >= 0.5;
+    // 该开关为 0 时候表示校验和出现差错, 为 1 时表示校验和没有出现差错
+    const checksum = random_error_switch ? 0 : 1;
+    console.log(`本次分组随机生成的校验和是: ${checksum}`);
+    return checksum;
+  }
 }
 
 // 初始化一个 UDP 客户端的状态机
 const CFSM = new ClientFiniteStateMachine({ SEND_INTERVAL, SERVER_PORT, SERVER_ADDRESS, CLIENT_PORT });
 // 每隔多少秒定时给客户端的 UDP 状态机派发一个发送消息的动作
-setInterval(((index) => () => CFSM.dispatch('rdt_send', `数字: ${index++}`))(0), SEND_INTERVAL);
+setInterval(((index) => () => CFSM.send_message(`数字: ${index++}`))(0), SEND_INTERVAL);

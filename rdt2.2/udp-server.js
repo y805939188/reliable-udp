@@ -13,6 +13,7 @@ class ServerFiniteStateMachine {
   prev_seq = 1;
   // 用该变量表示服务端渴望接收到的分组的序号
   desired_seq = 0;
+  // 用该变量表示服务端要返回给客户端的带有序号的 ACK 报文
   ack_with_seq = null;
 
   constructor({ SERVER_PORT }) {
@@ -21,6 +22,9 @@ class ServerFiniteStateMachine {
       this.SERVER_PORT = SERVER_PORT;
     }
   }
+
+  // 该方法暴露给外部, 当初始化该 class 之后调用
+  receive_message = () => this.init();
 
   run = () => this.init();
 
@@ -131,4 +135,4 @@ class ServerFiniteStateMachine {
 }
 
 const SFSM = new ServerFiniteStateMachine({ SERVER_PORT });
-SFSM.run();
+SFSM.receive_message();

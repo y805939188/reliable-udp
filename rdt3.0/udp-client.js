@@ -53,6 +53,9 @@ class ClientFiniteStateMachine {
     this.init_on_error();
   }
 
+  //  该方法作为暴露给上层的接口进行调用
+  send_message = (msg) => this.dispatch('rdt_send', msg)
+
   // 接收消息
   init_on_message = () => this.udp_client.on('message', (msg, { port, address }) => {
     logger.info(`udp 客户端接收到了来自 ${address}:${port} 的消息`);
@@ -165,4 +168,4 @@ class ClientFiniteStateMachine {
 // 初始化一个 UDP 客户端的状态机
 const CFSM = new ClientFiniteStateMachine({ SEND_INTERVAL, SERVER_PORT, SERVER_ADDRESS, CLIENT_PORT, DEFAULT_TIME_OUT });
 // 每隔多少秒定时给客户端的 UDP 状态机派发一个发送消息的动作
-setInterval(((index) => () => CFSM.dispatch('rdt_send', `数字: ${index++}`))(0), SEND_INTERVAL);
+setInterval(((index) => () => CFSM.send_message(`数字: ${index++}`))(0), SEND_INTERVAL);

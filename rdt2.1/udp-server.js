@@ -19,7 +19,8 @@ class ServerFiniteStateMachine {
     }
   }
 
-  run = () => this.init();
+  // 该方法暴露给外部, 当初始化该 class 之后调用
+  receive_message = () => this.init();
 
   init = () => {
     this.init_bind_port();
@@ -123,4 +124,4 @@ class ServerFiniteStateMachine {
 }
 
 const SFSM = new ServerFiniteStateMachine({ SERVER_PORT });
-SFSM.run();
+SFSM.receive_message();
