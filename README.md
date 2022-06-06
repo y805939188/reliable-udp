@@ -9,6 +9,11 @@
 [可靠传输 rdt3.0](https://github.com/y805939188/reliable-udp/tree/master/rdt3.0)</br>
 
 ---
+# 相关连接
+
+[基于 UDP 实现一个可靠传输协议](https://zhuanlan.zhihu.com/p/350786554)</br>
+
+---
 ## 等停协议
 - [x] 确认机制
 - [x] 超时重传
